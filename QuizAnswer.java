@@ -2,9 +2,13 @@ package engine;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public class QuizAnswer {
     private boolean isSuccess;
     private String feedback;
+    public static final QuizAnswer rightAnswer = new QuizAnswer(true, "Congratulations, you're right!");
+    public static final QuizAnswer wrongAnswer = new QuizAnswer(false, "Wrong answer! Please, try again.");
 
     public QuizAnswer() {
     }

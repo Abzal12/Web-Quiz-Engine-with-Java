@@ -1,12 +1,16 @@
 package engine;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Quiz {
     private String title;
     private String text;
     private List<String> options;
+    public final static Quiz quizQuestion = new Quiz("The Java Logo",
+            "What is depicted on the Java logo?",
+            Arrays.asList("Robot","Tea leaf","Cup of coffee","Bug"));
 
     public Quiz() {
     }
