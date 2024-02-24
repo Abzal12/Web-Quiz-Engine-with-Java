@@ -4,15 +4,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.validation.Valid;
 import javax.websocket.server.PathParam;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @RestController
 public class QuizController {
     int counter = 1;
     List<Quiz> quizzes = new ArrayList<>();
+
     @GetMapping("/api/quiz")
     public Quiz getQuiz() {
         return Quiz.quizQuestion;
@@ -26,11 +26,14 @@ public class QuizController {
             return QuizAnswer.wrongAnswer;
         }
     }
-
     @PostMapping("/api/quizzes")
-    public Quiz createAndReturnUserQuiz(@RequestBody Quiz quiz) {
+    public Quiz createAndReturnUserQuiz(@RequestBody @Valid Quiz quiz) {
         quiz.setId(counter);
         counter++;
+        if (quiz.getAnswer() == null) {
+            List<Integer> emptyAnswer = new ArrayList<>();
+            quiz.setAnswer(emptyAnswer);
+        }
         quizzes.add(quiz);
         return quiz;
     }
@@ -51,10 +54,10 @@ public class QuizController {
     }
 
     @PostMapping("api/quizzes/{id}/solve")
-    public ResponseEntity<?> returnAnswer(@PathVariable int id, @RequestParam int answer) {
+    public ResponseEntity<?> returnAnswer(@PathVariable int id, @RequestBody UserAnswer answer) {
         for (Quiz quiz : quizzes) {
             if (quiz.getId() == id) {
-                if (quiz.getAnswer() == answer) {
+                if (Objects.equals(quiz.getAnswer(), answer.getAnswer())) {
                     return ResponseEntity.ok(QuizAnswer.rightAnswer);
                 } else {
                     return ResponseEntity.ok(QuizAnswer.wrongAnswer);

@@ -4,17 +4,27 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class Quiz {
     private int id;
+    @JsonProperty(required = true)
+    @NotBlank
     private String title;
+    @JsonProperty(required = true)
+    @NotBlank
     private String text;
+    @JsonProperty(required = true)
+    @NotNull
+    @Size(min = 2)
     private List<String> options;
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private int answer;
+    private List<Integer> answer;
     public final static Quiz quizQuestion = new Quiz(100, "The Java Logo",
             "What is depicted on the Java logo?",
             Arrays.asList("Robot","Tea leaf","Cup of coffee","Bug"));
@@ -29,7 +39,7 @@ public class Quiz {
         this.options = options;
     }
 
-    public Quiz(int id, String title, String text, List<String> options, int answer) {
+    public Quiz(int id, String title, String text, List<String> options, List<Integer> answer) {
         this.id = id;
         this.title = title;
         this.text = text;
@@ -69,12 +79,11 @@ public class Quiz {
         this.id = id;
     }
 
-//    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    public int getAnswer() {
+    public List<Integer> getAnswer() {
         return answer;
     }
 
-    public void setAnswer(int answer) {
+    public void setAnswer(List<Integer> answer) {
         this.answer = answer;
     }
 }
