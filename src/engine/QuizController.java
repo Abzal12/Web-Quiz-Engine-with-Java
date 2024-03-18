@@ -1,11 +1,20 @@
 package engine;
 
 
+import engine.quiz_completed.QuizCompleted;
+import engine.quiz_completed.QuizCompletedRepo;
 import engine.user.AppUser;
 import engine.user.AppUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PagedResourcesAssembler;
+import org.springframework.hateoas.PagedModel;
+import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -16,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import javax.websocket.server.PathParam;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @RequiredArgsConstructor
@@ -26,6 +36,7 @@ public class QuizController {
     private QuizRepo quizRepo;
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;
+    private final QuizCompletedRepo quizCompletedRepo;
 
     @GetMapping("/api/quiz")
     public Quiz getQuiz() {
@@ -68,11 +79,15 @@ public class QuizController {
     }
 
     @GetMapping("api/quizzes")
-    public ResponseEntity<List<Quiz>> getAllQuizzes() {
+    public ResponseEntity<Iterable<Quiz>> getAllQuizzes(@RequestParam int page) {
         try {
-            List<Quiz> quizzes = new ArrayList<>(quizRepo.findAll());
+            //Pageable pageable = PageRequest.of(pageNumber + 1, 10);
+            Page<Quiz> quizzes = quizRepo.findAllPerPage(PageRequest.of(page, 10));
+
+            //List<Quiz> quizzes = new ArrayList<>(quizRepo.findAll());
             if (quizzes.isEmpty()) {
-                new ResponseEntity<>(HttpStatus.NO_CONTENT);
+                Page<Quiz> quizList = Page.empty();
+                return new ResponseEntity<>(quizList, HttpStatus.OK);
             }
             return new ResponseEntity<>(quizzes, HttpStatus.OK);
         } catch (Exception exception) {
@@ -81,20 +96,23 @@ public class QuizController {
     }
 
     @PostMapping("api/quizzes/{id}/solve")
-    public ResponseEntity<QuizAnswer> returnAnswer(@PathVariable Long id, @RequestBody UserAnswer answer) {
+    public ResponseEntity<QuizAnswer> returnAnswer(@PathVariable Long id,
+                                                   @RequestBody UserAnswer answer,
+                                                   @AuthenticationPrincipal UserDetails userDetails) {
         //List<Quiz> quizzes = new ArrayList<>(quizRepo.findAll());
         Optional<Quiz> quizObj = quizRepo.findById(id);
-
+        QuizCompleted quizCompleted = new QuizCompleted();
         if (quizObj.isPresent()) {
-            System.out.println("quizObj answer: " + quizObj.get().getAnswer().getClass());
-            System.out.println("answer answer: " + answer.getAnswer().getClass());
-//                if(quizObj.get().getAnswer().equals(answer.getAnswer()))
-            if(Objects.equals(new ArrayList<>(quizObj.get().getAnswer()), answer.getAnswer()))
+
+            if (Objects.equals(new ArrayList<>(quizObj.get().getAnswer()), answer.getAnswer()))
             {
-                System.out.println("hhe you are right!");
+                LocalDateTime myObj = LocalDateTime.now();
+                quizCompleted.setCompletedAt(myObj);
+                quizCompleted.setQuizId(quizObj.get().getId());
+                quizCompleted.setUsername(userDetails.getUsername());
+                quizCompletedRepo.save(quizCompleted);
                 return new ResponseEntity<>(QuizAnswer.rightAnswer, HttpStatus.OK);
             } else {
-                System.out.println("hhe you are wrong!");
                 return new ResponseEntity<>(QuizAnswer.wrongAnswer, HttpStatus.OK);
             }
         }
@@ -105,10 +123,6 @@ public class QuizController {
     @PostMapping("api/register")
     public ResponseEntity<?> registration(@RequestBody @Valid RegistrationRequest registrationRequest) {
         var user = new AppUser();
-        //String regexp = "^[a-zA-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]+$";
-//        if (!registrationRequest.getEmail().matches(regexp)) {
-//            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
-//        }
         if (appUserRepository.findAppUserByUsername(registrationRequest.getEmail()).isPresent()) {
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
@@ -132,5 +146,18 @@ public class QuizController {
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
         return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+    }
+
+    @GetMapping("/api/quizzes/completed")
+    public ResponseEntity<?> getCompletedQuizzes(@RequestParam int page,
+                                                 @AuthenticationPrincipal UserDetails userDetails) {
+        Page<QuizCompleted> quizCompletedPage = quizCompletedRepo.findAllByUsernamePerPage(
+                userDetails.getUsername(),
+                PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "completedAt")));
+        if (quizCompletedPage.isEmpty()) {
+            List<QuizCompleted> list = List.of();
+            return new ResponseEntity<>(list, HttpStatus.OK);
+        }
+        return new ResponseEntity<>(quizCompletedPage, HttpStatus.OK);
     }
 }

@@ -19,7 +19,7 @@ import java.util.List;
 @Entity
 public class Quiz {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.TABLE)
     private Long id;
     @JsonProperty(required = true)
     @NotBlank
